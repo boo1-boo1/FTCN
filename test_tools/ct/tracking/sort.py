@@ -178,7 +178,7 @@ def associate_detections_to_trackers(detections, trackers, iou_threshold=0.3):
             iou_matrix[d, t] = iou(det, trk)
 
     matched_indices = linear_sum_assignment(-iou_matrix)
-    matched_indices = np.array(list(zip(*matched_indices)), dtype=np.int)
+    matched_indices = np.array(list(zip(*matched_indices)), dtype=np.int64)
     matched_indices.shape = (-1, 2)
     # print(matched_indices)
     # print(type(matched_indices))

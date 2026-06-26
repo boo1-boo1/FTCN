@@ -181,7 +181,7 @@ class TransformerHead(nn.Module):
         return x
 
 
-parameters = [parameter for parameter in signature(nn.Conv3d).parameters]
+parameters = [parameter for parameter in signature(nn.Conv3d).parameters if parameter not in ("device", "dtype")]
 print(parameters)
 
 spatial_count = my_cfg.model.inco.spatial_count

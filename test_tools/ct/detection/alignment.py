@@ -437,7 +437,7 @@ def load_model(model, pretrained_path, load_to_cpu):
     if load_to_cpu:
         if pretrained_path is None:
             url = "https://github.com/yinglinzheng/face_weights/releases/download/v1/mobilenet0.25_Final.pth"
-            pretrained_dict = torch.utils.model_zoo.load_url(url)
+            pretrained_dict = torch.utils.model_zoo.load_url(url, map_location=lambda storage, loc: storage)
         else:
             pretrained_dict = torch.load(
                 pretrained_path, map_location=lambda storage, loc: storage

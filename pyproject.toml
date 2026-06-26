@@ -1,0 +1,32 @@
+[project]
+name = "ftcn"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+  "albumentations>=2.0.8",
+  "contexttimer>=0.3.3",
+  "einops>=0.8.2",
+  "ffmpeg-python>=0.2.0",
+  "filterpy>=1.4.5",
+  "fvcore>=0.1.5.post20221221",
+  "imgaug>=0.4.0",
+  "lmdb>=2.2.1",
+  "opencv-transforms>=0.0.6",
+  "pandas>=3.0.3",
+  "pillow>=12.2.0",
+  "prettytable>=3.18.0",
+  "pyturbojpeg>=2.4.0",
+  "scikit-learn>=1.9.0",
+  "scipy>=1.18.0",
+  "simplejson>=4.1.1",
+  "tabulate>=0.10.0",
+  "tensorboardx>=2.6.5",
+  "termcolor>=3.3.0",
+  "torch>=2.12.1",
+  "torchvision>=0.27.1",
+]
+
+[[tool.uv.index]]
+url = "https://download.pytorch.org/whl/cpu"

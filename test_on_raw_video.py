@@ -11,8 +11,9 @@ from test_tools.supply_writer import SupplyWriter
 import argparse
 from tqdm import tqdm
 
-mean = torch.tensor([0.485 * 255, 0.456 * 255, 0.406 * 255,]).cuda().view(1, 3, 1, 1, 1)
-std = torch.tensor([0.229 * 255, 0.224 * 255, 0.225 * 255,]).cuda().view(1, 3, 1, 1, 1)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+mean = torch.tensor([0.485 * 255, 0.456 * 255, 0.406 * 255,]).to(device).view(1, 3, 1, 1, 1)
+std = torch.tensor([0.229 * 255, 0.224 * 255, 0.225 * 255,]).to(device).view(1, 3, 1, 1, 1)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -26,7 +27,7 @@ if __name__ == "__main__":
     cfg.freeze()
 
     classifier = PluginLoader.get_classifier(cfg.classifier_type)()
-    classifier.cuda()
+    classifier.to(device)
     classifier.eval()
     classifier.load("checkpoints/ftcn_tt.pth")
 
@@ -112,7 +113,7 @@ if __name__ == "__main__":
             data_storage[base_key + "ldm"] = info
             data_storage[base_key + "idx"] = frame_idx
 
-            frame_boxes[frame_idx] = np.rint(box).astype(np.int)
+            frame_boxes[frame_idx] = np.rint(box).astype(np.int64)
 
     print("sampling clips from super clips", super_clips)
 
@@ -131,7 +132,7 @@ if __name__ == "__main__":
             assert len(post_module) == pad_length
 
             pre_module = inner_index + inner_index[1:-1][::-1]
-            l_pre = len(post_module)
+            l_pre = len(pre_module)
             pre_module = pre_module * (pad_length // l_pre + 1)
             pre_module = pre_module[-pad_length:]
             assert len(pre_module) == pad_length
@@ -155,7 +156,7 @@ if __name__ == "__main__":
         landmarks = [data_storage[f"{i}_{j}_ldm"] for i, j in clip]
         frame_ids = [data_storage[f"{i}_{j}_idx"] for i, j in clip]
         landmarks, images = crop_align_func(landmarks, images)
-        images = torch.as_tensor(images, dtype=torch.float32).cuda().permute(3, 0, 1, 2)
+        images = torch.as_tensor(images, dtype=torch.float32).to(device).permute(3, 0, 1, 2)
         images = images.unsqueeze(0).sub(mean).div(std)
 
         with torch.no_grad():
