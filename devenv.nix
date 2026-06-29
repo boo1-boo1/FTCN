@@ -10,9 +10,6 @@
   languages.python = {
     enable = true;
 
-    lsp.enable = true;
-    lsp.package = pkgs.basedpyright;
-
     uv.enable = true;
     uv.sync.enable = true;
 
@@ -20,6 +17,11 @@
   };
 
   packages = with pkgs; [
+    pyright
+    basedpyright
+    ruff
+    black
+
     zlib
   ];
 }

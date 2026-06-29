@@ -2,6 +2,7 @@ from utils.plugin_loader import PluginLoader
 from config import config as cfg
 import torch
 import os
+import pickle
 import numpy as np
 from test_tools.common import detect_all, grab_all_frames
 from test_tools.utils import get_crop_box
@@ -14,6 +15,7 @@ from tqdm import tqdm
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 mean = torch.tensor([0.485 * 255, 0.456 * 255, 0.406 * 255,]).to(device).view(1, 3, 1, 1, 1)
 std = torch.tensor([0.229 * 255, 0.224 * 255, 0.225 * 255,]).to(device).view(1, 3, 1, 1, 1)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -42,7 +44,9 @@ if __name__ == "__main__":
     cache_file = f"{input_file}_{str(max_frame)}.pth"
 
     if os.path.exists(cache_file):
-        detect_res, all_lm68 = torch.load(cache_file)
+        # local CLI tool — cache path is on the same filesystem as the caller; no remote/untrusted input
+        with open(cache_file, "rb") as f:
+            detect_res, all_lm68 = pickle.load(f)
         frames = grab_all_frames(input_file, max_size=max_frame, cvt=True)
         print("detection result loaded from cache")
     else:
@@ -50,7 +54,8 @@ if __name__ == "__main__":
         detect_res, all_lm68, frames = detect_all(
             input_file, return_frames=True, max_size=max_frame
         )
-        torch.save((detect_res, all_lm68), cache_file)
+        with open(cache_file, "wb") as f:
+            pickle.dump((detect_res, all_lm68), f)
         print("detect finished")
 
     print("number of frames",len(frames))
@@ -72,6 +77,7 @@ if __name__ == "__main__":
     detect_res = all_detect_res
 
     print("split into super clips")
+    print("faces per frame (first 10):", [len(f) for f in detect_res[:10]])
 
     tracks = multiple_tracking(detect_res)
     tuples = [(0, len(detect_res))] * len(tracks)
@@ -170,7 +176,7 @@ if __name__ == "__main__":
         preds.append(pred)
 
     print(np.mean(preds))
-    
+
     boxes = []
     scores = []
 
