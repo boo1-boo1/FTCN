@@ -531,6 +531,9 @@ def post_process(
     return dets
 
 
+_priorbox_cache = {}
+
+
 def batch_detect(net, images, device, is_tensor=False, normalized=False):
     with torch.no_grad():
         confidence_threshold = 0.02
@@ -566,9 +569,10 @@ def batch_detect(net, images, device, is_tensor=False, normalized=False):
 
         loc, conf, landms = net(img)  # forward pass
 
-        priorbox = PriorBox(cfg, image_size=(im_height, im_width))
-        priors = priorbox.forward()
-        prior_data = priors.to(device)
+        _cache_key = (im_height, im_width)
+        if _cache_key not in _priorbox_cache:
+            _priorbox_cache[_cache_key] = PriorBox(cfg, image_size=_cache_key).forward()
+        prior_data = _priorbox_cache[_cache_key].to(device)
         scale1 = torch.as_tensor(
             [
                 img.shape[3],

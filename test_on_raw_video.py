@@ -13,6 +13,7 @@ import argparse
 from tqdm import tqdm
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+torch.set_num_threads(os.cpu_count() or 1)
 mean = torch.tensor([0.485 * 255, 0.456 * 255, 0.406 * 255,]).to(device).view(1, 3, 1, 1, 1)
 std = torch.tensor([0.229 * 255, 0.224 * 255, 0.225 * 255,]).to(device).view(1, 3, 1, 1, 1)
 
@@ -157,23 +158,31 @@ if __name__ == "__main__":
     preds = []
     frame_res = {}
 
-    for clip in tqdm(clips_for_video, desc="testing"):
-        images = [data_storage[f"{i}_{j}_img"] for i, j in clip]
-        landmarks = [data_storage[f"{i}_{j}_ldm"] for i, j in clip]
-        frame_ids = [data_storage[f"{i}_{j}_idx"] for i, j in clip]
-        landmarks, images = crop_align_func(landmarks, images)
-        images = torch.as_tensor(images, dtype=torch.float32).to(device).permute(3, 0, 1, 2)
-        images = images.unsqueeze(0).sub(mean).div(std)
+    CLIP_BATCH_SIZE = 4
 
+    for batch_start in tqdm(range(0, len(clips_for_video), CLIP_BATCH_SIZE), desc="testing"):
+        batch = clips_for_video[batch_start : batch_start + CLIP_BATCH_SIZE]
+        batch_tensors = []
+        batch_frame_ids = []
+        for clip in batch:
+            imgs = [data_storage[f"{i}_{j}_img"] for i, j in clip]
+            ldms = [data_storage[f"{i}_{j}_ldm"] for i, j in clip]
+            fids = [data_storage[f"{i}_{j}_idx"] for i, j in clip]
+            ldms, imgs = crop_align_func(ldms, imgs)
+            batch_tensors.append(
+                torch.as_tensor(imgs, dtype=torch.float32).permute(3, 0, 1, 2)
+            )
+            batch_frame_ids.append(fids)
+
+        batch_input = torch.stack(batch_tensors).to(device).sub(mean).div(std)
         with torch.no_grad():
-            output = classifier(images)
+            output = classifier(batch_input)
 
-        pred = float(output["final_output"])
-        for f_id in frame_ids:
-            if f_id not in frame_res:
-                frame_res[f_id] = []
-            frame_res[f_id].append(pred)
-        preds.append(pred)
+        for fids, pred in zip(batch_frame_ids, output["final_output"].squeeze(1)):
+            pred_val = float(pred)
+            for f_id in fids:
+                frame_res.setdefault(f_id, []).append(pred_val)
+            preds.append(pred_val)
 
     print(np.mean(preds))
 

@@ -98,24 +98,34 @@ def detect_all(file, sfd_only=False, return_frames=False, max_size=None):
 def get_lm68(frames, detect_res):
     assert len(frames) == len(detect_res)
     frame_count = len(frames)
-    all_68 = []
+
+    # Phase 1: collect all face feeds across all frames in one pass
+    all_feeds = []
+    face_counts = []
     for i in range(frame_count):
-        frame = frames[i]
         faces = detect_res[i]
-        if len(faces) == 0:
-            res_68 = []
-        else:
-            feeds = []
-            for face in faces:
-                assert len(face) == 3
-                box = face[0]
-                feed = LandmarkPredictor.prepare_feed(frame, box)
-                feeds.append(feed)
-            res_68 = predictor(feeds)
-            assert len(res_68) == len(faces)
-            for face, l_68 in zip(faces, res_68):
-                if face[1] is None:
-                    face[1] = get_five(l_68)
+        for face in faces:
+            assert len(face) == 3
+            all_feeds.append(LandmarkPredictor.prepare_feed(frames[i], face[0]))
+        face_counts.append(len(faces))
+
+    # Phase 2: forward pass in chunks to bound memory on low-memory devices
+    LM_BATCH_SIZE = 32
+    all_res_68 = []
+    for i in range(0, len(all_feeds), LM_BATCH_SIZE):
+        all_res_68.extend(predictor(all_feeds[i : i + LM_BATCH_SIZE]))
+    if not all_feeds:
+        all_res_68 = []
+
+    # Phase 3: redistribute results by frame, fill lm5 if missing
+    all_68 = []
+    offset = 0
+    for i, count in enumerate(face_counts):
+        res_68 = all_res_68[offset : offset + count]
+        offset += count
+        for face, l_68 in zip(detect_res[i], res_68):
+            if face[1] is None:
+                face[1] = get_five(l_68)
         all_68.append(res_68)
 
     assert len(all_68) == len(detect_res)

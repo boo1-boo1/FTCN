@@ -116,7 +116,7 @@ def batch_predict2(model, feeds, device, batch_size=None):
         feeds = [feeds]
     if batch_size is None:
         batch_size = len(feeds)
-    loader = DataLoader(feeds, batch_size=len(feeds), shuffle=False)
+    loader = DataLoader(feeds, batch_size=batch_size, shuffle=False)
     results = []
     for feed in loader:
         landmarks = model(feed["data"].to(device)).cpu()
